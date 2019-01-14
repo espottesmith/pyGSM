@@ -87,7 +87,7 @@ class SE_GSM(Base_Method):
 
     def add_node(self,n1,n2,n3=None):
         print "adding node: %i from node %i" %(n2,n1)
-        return DLC.add_node_SE(self.icoords[n1],self.driving_coords)
+        return DLC.add_node_SE(self.icoords[n1],self.driving_coords,dqmag_max=self.DQMAG_MAX,dqmag_min=self.DQMAG_MIN)
 
     def add_last_node(self,rtype):
         assert rtype==1 or rtype==2, "rtype must be 1 or 2"
@@ -110,10 +110,16 @@ class SE_GSM(Base_Method):
 
 
     def check_add_node(self):
-        if self.icoords[self.nR-1].gradrms < self.gaddmax:
+        success=True
+        #if self.icoords[self.nR-1].gradrms < self.gaddmax:
+        if self.icoords[self.nR-1].gradrms < self.ADD_NODE_TOL:
+            if self.nR == self.nnodes:
+                print " Ran out of nodes, exiting GSM"
+                raise ValueError
             self.active[self.nR-1] = False
             if self.icoords[self.nR] == 0:
-                self.interpolateR()
+                success=self.interpolateR()
+        return success
 
     def interpolate(self,newnodes=1):
         if self.nn+newnodes > self.nnodes:

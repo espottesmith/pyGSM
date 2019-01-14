@@ -19,10 +19,18 @@ class ICoords:
             for j in range(1,i):
                 a = self.getAtomicNum(i)
                 b = self.getAtomicNum(j)
-                MAX_BOND_DIST = (self.get_element_VDW(a) + self.get_element_VDW(b))/2.
+                MAX_BOND_DIST = (self.get_element_VDW(a) + self.get_element_VDW(b))/2.+0.2
                 d = self.distance(i,j)
                 if d<MAX_BOND_DIST:
                     bonds.append((i,j))
+
+        if not self.EXTRA_BONDS:
+            for bond in self.EXTRA_BONDS:
+                if bond in bonds or tuple(reversed(bond)) in bonds:
+                    pass
+                else:
+                    bonds.append(bond)
+
         #for bond in ob.OBMolBondIter(self.mol.OBMol):
         #    nbonds+=1
         #    a=bond.GetBeginAtomIdx()
@@ -31,9 +39,8 @@ class ICoords:
         #        bonds.append((a,b))
         #    else:
         #        bonds.append((b,a))
-
-
         #bonds = sorted(bonds)
+        print bonds
         for bond in bonds:
             bondd.append(self.distance(bond[0],bond[1]))
         nbonds = len(bonds)
@@ -161,8 +168,7 @@ class ICoords:
         #print "\n"
         return np.asarray(ictan).reshape((ICoord1.num_ics,1))
 
-    def tangent_SE(ICoord1,driving_coordinates):
-        ictan = []
+    def tangent_SE(ICoord1,driving_coordinates,reverseDirection=False):
         nadds = driving_coordinates.count("ADD")
         nbreaks = driving_coordinates.count("BREAK")
         nangles = driving_coordinates.count("ANGLE")
@@ -184,9 +190,13 @@ class ICoords:
             if "BREAK" in i:
                 bond = (i[1],i[2])
                 wbond = ICoord1.BObj.bond_num(bond)
-                d0 = (ICoord1.get_element_VDW(bond[0]) + ICoord1.get_element_VDW(bond[1]))*2.
+                if i[3]==None:
+                    d0 = (ICoord1.get_element_VDW(bond[0]) + ICoord1.get_element_VDW(bond[1]))*2.
+                else:
+                    d0=i[3]
                 if ICoord1.distance(bond[0],bond[1])<d0:
                     ictan[wbond] = -1*(d0-ICoord1.distance(bond[0],bond[1])) # NOTE THAT THIS IS NOT HOW THE ORIGINAL GSM WORKED 
+
                 if ICoord1.print_level>0:
                     print "bond %s d0: %4.3f diff: %4.3f " % (i[1],d0,ictan[wbond])
             if "ANGLE" in i:
@@ -210,6 +220,10 @@ class ICoords:
                     ictan[ICoord1.BObj.nbonds+ICoord1.AObj.nangles+tor_idx] = -tor_diff*np.pi/180.
                 print(" torsion: %s is index %i "%(i[1],tor_idx))
                 print(" torv: %4.3f align to %4.3f diff(rad): %4.3f" %(ICoord1.TObj.torv[tor_idx],tort,tor_diff))
+
+            if np.all(ictan==0.0):
+                #raise RuntimeError,"All elements are zero"
+                print " All elements are zero"
 
 
         return ictan

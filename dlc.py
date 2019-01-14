@@ -11,6 +11,7 @@ from _icoord import ICoords
 from _bmat import Bmat
 #from pes import *
 from penalty_pes import *
+from avg_pes import *
 from base_dlc import *
 np.set_printoptions(precision=4)
 np.set_printoptions(suppress=True)
@@ -40,7 +41,7 @@ class DLC(Base_DLC,Bmat,Utils):
             self.energy = 0.
             self.DMAX = 0.1
             self.nretry = 0 
-            self.DMIN0 =self.DMAX/10.
+            self.DMIN0 =0.001#self.DMAX/10.
             self.coords = np.zeros((len(self.mol.atoms),3))
             self.isTSnode=False
             for i,a in enumerate(ob.OBMolAtomIter(self.mol.OBMol)):
@@ -125,7 +126,7 @@ class DLC(Base_DLC,Bmat,Utils):
         #        nicd= icoordA.nicd
         #        )
     @staticmethod
-    def add_node_SE(ICoordA,driving_coordinate):
+    def add_node_SE(ICoordA,driving_coordinate,dqmag_max=0.8,dqmag_min=0.2):
 
         dq0 = np.zeros((ICoordA.nicd,1))
         ICoordA.mol.write('xyz','tmp1.xyz',overwrite=True)
@@ -149,16 +150,16 @@ class DLC(Base_DLC,Bmat,Utils):
         bdist = np.linalg.norm(ictan)
         print 'bdist: {:2.14f}'.format(bdist)
         #bdist = np.dot(ICoordC.Ut[-1,:],ictan)
-        ICoordC.bmatp_create()
+        ICoordC.bmatp=ICoordC.bmatp_create()
         ICoordC.bmat_create()
-        DQMAG_SSM_MAX=0.8
-        DQMAG_SSM_MIN=0.2
-        DQMAG_SSM_SCALE=1.5
-        minmax = DQMAG_SSM_MAX - DQMAG_SSM_MIN
-        a = bdist/DQMAG_SSM_SCALE
+        dqmag_max=0.8
+        dqmag_min=0.2
+        dqmag_scale=1.5
+        minmax = dqmag_max - dqmag_min
+        a = bdist/dqmag_scale
         if a>1:
             a=1
-        dqmag = DQMAG_SSM_MIN+minmax*a
+        dqmag = dqmag_min+minmax*a
         print " dqmag: %4.3f from bdist: %4.3f" %(dqmag,bdist)
 
         dq0[ICoordC.nicd-1] = -dqmag
@@ -166,7 +167,7 @@ class DLC(Base_DLC,Bmat,Utils):
         print " dq0[constraint]: %1.3f" % dq0[ICoordC.nicd-1]
         ICoordC.ic_to_xyz(dq0)
         ICoordC.update_ics()
-        ICoordC.bmatp_create()
+        ICoordC.bmatp=ICoordC.bmatp_create()
         ICoordC.bmatp_to_U()
         ICoordC.bmat_create()
         ICoordC.mol.write('xyz','after.xyz',overwrite=True)
@@ -176,7 +177,7 @@ class DLC(Base_DLC,Bmat,Utils):
         return ICoordC
 
     @staticmethod
-    def add_node_SE_X(ICoordA,driving_coordinate):
+    def add_node_SE_X(ICoordA,driving_coordinate,dqmag_max=0.8,dqmag_min=0.2,BDISTMIN=0.05):
 
         dq0 = np.zeros((ICoordA.nicd,1))
         ICoordA.mol.write('xyz','tmp1.xyz',overwrite=True)
@@ -203,18 +204,20 @@ class DLC(Base_DLC,Bmat,Utils):
         ictan = DLC.tangent_SE(ICoordA,driving_coordinate)
         ICoordC.opt_constraint(ictan)
         bdist = np.linalg.norm(ictan)
-        #bdist = np.dot(ICoordC.Ut[-1,:],ictan)
+        if bdist<BDISTMIN:
+            print "not adding node, bdist too small ", bdist
+            return 0
         print 'bdist: {:2.14f}'.format(bdist)
-        ICoordC.bmatp_create()
+        ICoordC.bmatp=ICoordC.bmatp_create()
         ICoordC.bmat_create()
-        DQMAG_SSM_MAX=0.8
-        DQMAG_SSM_MIN=0.2
-        DQMAG_SSM_SCALE=1.5
-        minmax = DQMAG_SSM_MAX - DQMAG_SSM_MIN
-        a = bdist/DQMAG_SSM_SCALE
+        dqmag_max=0.8
+        dqmag_min=0.2
+        dqmag_scale=1.5
+        minmax = dqmag_max - dqmag_min
+        a = bdist/dqmag_scale
         if a>1:
             a=1
-        dqmag = DQMAG_SSM_MIN+minmax*a
+        dqmag = dqmag_min+minmax*a
         print " dqmag: %4.3f from bdist: %4.3f" %(dqmag,bdist)
 
         dq0[ICoordC.nicd-1] = -dqmag
@@ -304,14 +307,22 @@ class DLC(Base_DLC,Bmat,Utils):
     def copy_node_X(ICoordA,new_node_id,rtype=0):
         ICoordA.mol.write('xyz','tmp1.xyz',overwrite=True)
         mol1 = pb.readfile('xyz','tmp1.xyz').next()
-        lot1 = ICoordA.PES.lot.copy(ICoordA.PES.lot,new_node_id)
+        do_coupling=False
+        if rtype>=5:
+            do_coupling=True
+        else:
+            do_coupling=False
+        lot1 = ICoordA.PES.lot.copy(ICoordA.PES.lot,new_node_id,do_coupling=do_coupling)
         pes1 = PES(ICoordA.PES.PES1.options.copy().set_values({
             "lot": lot1,
             }))
         pes2 = PES(ICoordA.PES.PES2.options.copy().set_values({
             "lot": lot1,
             }))
-        pes = Penalty_PES(pes1,pes2)
+        if rtype>=5:
+            pes = Avg_PES(pes1,pes2)
+        else:
+            pes = Penalty_PES(pes1,pes2)
         ICoordC = DLC(ICoordA.options.copy().set_values({
             "mol":mol1,
             "bonds":ICoordA.BObj.bonds,
@@ -719,8 +730,7 @@ class DLC(Base_DLC,Bmat,Utils):
         #    print self.bmatti
 
         if self.opt_type!=3 and self.opt_type!=4:
-            self.Hintp_to_Hint()
-        self.coorp = np.copy(self.coords)
+            self.Hint = self.Hintp_to_Hint()
         # grad in ics
         self.gradq = self.grad_to_q(grad)
         if self.print_level==2:
@@ -729,8 +739,6 @@ class DLC(Base_DLC,Bmat,Utils):
         self.gradrms = np.sqrt(np.dot(self.gradq.T[0,:self.nicd-nconstraints],self.gradq[:self.nicd-nconstraints,0])/(self.nicd-nconstraints))
         #print "gradrms after update %1.3f" %self.gradrms 
         self.pgradrms = self.gradrms
-        if self.gradrms < self.OPTTHRESH:
-            return 0.
 
         # => Update Hessian <= #
         self.pgradqprim=self.gradqprim
@@ -770,7 +778,7 @@ class DLC(Base_DLC,Bmat,Utils):
 
         #do this if close to seam if coupling, don't do this if isTSnode or exact TS search (opt_type 4)
         if ( self.dEstep>0.01 and not self.isTSnode and (self.opt_type in [0,1,2,3] or (self.PES.lot.do_coupling and self.PES.dE<1.0))):
-            if self.print_level>1:
+            if self.print_level>0:
                 print("decreasing DMAX"),
             self.buf.write(" decreasing DMAX")
             if self.smag <self.DMAX:
@@ -778,11 +786,11 @@ class DLC(Base_DLC,Bmat,Utils):
             else: 
                 self.DMAX = self.DMAX/1.5
             if self.dEstep > 2.0 and self.resetopt==True:
-                if self.print_level>0:
-                    print "resetting coords to coorp"
+                #if self.print_level>0:
+                print "resetting coords to coorp"
                 self.coords = self.coorp
-                self.energy = self.PES.get_energy(self.geom)
                 self.update_ics()
+                self.energy = self.PES.get_energy(self.geom)
                 self.update_hess=False
 
         elif self.opt_type==4 and self.ratio<0. and abs(self.dEpre)>0.05:
@@ -792,7 +800,7 @@ class DLC(Base_DLC,Bmat,Utils):
             self.DMAX = self.DMAX/1.35
 
         elif (self.ratio<0.25 or self.ratio>1.5): #can also check that dEpre >0.05?
-            if self.print_level>1:
+            if self.print_level>0:
                 print("decreasing DMAX"),
             self.buf.write(" decreasing DMAX")
             if self.smag<self.DMAX:
@@ -801,7 +809,7 @@ class DLC(Base_DLC,Bmat,Utils):
                 self.DMAX = self.DMAX/1.2
 
         elif self.ratio>0.75 and self.ratio<1.25 and self.smag > self.DMAX and self.gradrms<(self.pgradrms*1.35):
-            if self.print_level>1:
+            if self.print_level>0:
                 print("increasing DMAX"),
             self.buf.write(" increasing DMAX")
             self.DMAX=self.DMAX*1.1 + 0.01
@@ -853,6 +861,9 @@ class DLC(Base_DLC,Bmat,Utils):
     def opt_step(self,nconstraints,ictan=None,refE=0):
         if ictan is not None:
             assert nconstraints>=1,"nconstraints >= 1 if ictan is not None"
+        if nconstraints>0:
+            assert self.opt_type!=4,"nconstraints = 0 for eigenvector follow."
+
 
         # => update PES info <= #
         if self.opt_type!=3 and self.opt_type!=4:
@@ -878,6 +889,7 @@ class DLC(Base_DLC,Bmat,Utils):
             print self.dq.T
 
         # => update geometry <=#
+        self.coorp = np.copy(self.coords)
         rflag = self.ic_to_xyz_opt(self.dq)
 
         #TODO if rflag and ixflag
@@ -893,9 +905,9 @@ class DLC(Base_DLC,Bmat,Utils):
      
         # => calc energy at new position <= #
         self.energy = self.PES.get_energy(self.geom)
-        self.buf.write(" E(M): %3.2f" %(self.energy - refE))
-        if self.print_level>1:
-            print "E(M): %3.5f" % (self.energy-refE),
+        self.buf.write(" E(M): %3.4f" %(self.energy - refE))
+        if self.print_level>0:
+            print " E(M): %3.5f" % (self.energy-refE),
 
         #form DLC at new position
         if self.opt_type!=3 and self.opt_type!=4:
@@ -911,18 +923,21 @@ class DLC(Base_DLC,Bmat,Utils):
         # constraint contribution
         for n in range(nconstraints):
             self.dEpre +=self.gradq[-n-1]*self.dq[-n-1]*KCAL_MOL_PER_AU  # DO this b4 recalc gradq
+            self.buf.write(" cg[%i] %1.2f" %(n,self.gradq[-n-1]))
 
         self.ratio = self.dEstep/self.dEpre
         self.buf.write(" predE: %1.4f ratio: %1.4f" %(self.dEpre, self.ratio))
-        if self.print_level>1:
-            print "ratio is %1.4f" % self.ratio,
+        if self.print_level>0:
+            print " ratio is %1.4f" % self.ratio,
+            print " predE: %1.4f" %self.dEpre,
+            print " dEstep = %3.2f" %self.dEstep,
 
         grad = self.PES.get_gradient(self.geom)
         self.pgradq = np.copy(self.gradq)
         self.gradq = self.grad_to_q(grad)
         self.pgradrms = self.gradrms
         self.gradrms = np.sqrt(np.dot(self.gradq.T[0,:self.nicd-nconstraints],self.gradq[:self.nicd-nconstraints,0])/(self.nicd-nconstraints))
-        if self.print_level>1:
+        if self.print_level>0:
             print("gradrms = %1.5f" % self.gradrms),
         self.buf.write(" gRMS=%1.5f" %(self.gradrms))
 
@@ -930,7 +945,6 @@ class DLC(Base_DLC,Bmat,Utils):
         self.step_controller()
 
         return  self.smag
-
 
     def update_Hessian(self,mode=1):
         #print("In update bfgsp")

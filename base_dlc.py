@@ -99,6 +99,13 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
                 allowed_types=[int],
                 doc='type of optimization')
 
+        opt.add_option(
+                key='EXTRA_BONDS',
+                value='[]',
+                required=False,
+                doc='extra bond internal coordinate for creating DLC.'
+                )
+
         Base_DLC._default_options = opt
         return Base_DLC._default_options.copy()
 
@@ -122,6 +129,8 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         self.nicd=self.options['nicd']
         self.OPTTHRESH=self.options['OPTTHRESH']
         self.opt_type=self.options['opt_type']
+        self.EXTRA_BONDS=self.options['EXTRA_BONDS']
+        #TODO assert stuff here depending on opt_type
         self.madeBonds = False
         self.isTSnode = False
         self.update_hess=False
@@ -256,6 +265,7 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         G=np.matmul(self.bmatp,np.transpose(self.bmatp))
         # Singular value decomposition
         v_temp,e,vh  = np.linalg.svd(G)
+        v_temp
         v = np.transpose(v_temp)
         
         lowev=0
@@ -267,6 +277,7 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         self.nicd -= lowev
         if lowev>3:
             print(" Error: optimization space less than 3N-6 DOF")
+            print e
             exit(-1)
 
         #print(" Number of internal coordinate dimensions %i" %self.nicd)
@@ -395,23 +406,6 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         phi = 1. - dxtE*dxtE/(dxtdx*EtE)
 
         self.Hint += (1.-phi)*Gms + phi*Gpsb
-        #print "dxtdx" 
-        #print dxtdx
-        #print "dxtdx" 
-        #print "dgmGdxtdx" 
-        #print dgmGdxtdx
-        #print dxtdg
-        #print "dxtGdx" 
-        #print dxtGdx
-        #print "dxtE" 
-        #print dxtE
-        #print "EtE" 
-        #print EtE
-        #print "phi" 
-        #print phi
-        #print "Hint after bofill"
-        #with np.printoptions(threshold=np.inf):
-        #    print self.Hint
         self.Hinv = np.linalg.inv(self.Hint)
 
 
@@ -423,7 +417,7 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         dEtemp = np.dot(self.Hint[:self.nicd-nconstraints,:self.nicd-nconstraints],dq0[:self.nicd-nconstraints])
         dEpre = np.dot(np.transpose(dq0[:self.nicd-nconstraints]),self.gradq[:self.nicd-nconstraints]) + 0.5*np.dot(np.transpose(dEtemp),dq0[:self.nicd-nconstraints])
         dEpre *=KCAL_MOL_PER_AU
-        if abs(dEpre)<0.05: dEpre = np.sign(dEpre)*0.05
+        #if abs(dEpre)<0.05: dEpre = np.sign(dEpre)*0.05
         if self.print_level>1:
             print( "predE: %1.4f " % dEpre),
         return dEpre
@@ -514,7 +508,7 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         overlap = np.dot(np.dot(tmph,self.Ut),Cn) #(nicd,nicd)(nicd,num_ic)(num_ic,1) = (nicd,1)
 
         # Max overlap metrics
-        self.maxol_w_Hess(overlap)
+        self.maxol_w_Hess(overlap[0:4])
 
         # => set lamda1 scale factor <=#
         lambda1 = self.set_lambda1(eigen)
@@ -579,13 +573,13 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
         print " printing overlaps ", overlap[:4].T
 
         # Max overlap metrics
-        self.maxol_w_Hess(overlap)
+        self.maxol_w_Hess(overlap[0:4])
 
         # => set lamda1 scale factor <=#
         lambda1 = self.set_lambda1(eigen)
 
         # => if overlap is small use Cn as Constraint <= #
-        dq = self.check_overlap(ictan)
+        dq = self.check_overlap(ictan) #in _opt_utils
         if dq is not None:
             if self.opt_type==4:
                 self.opt_type = 2 # reform get_eigenv_finite and all future opt_steps in this batch will do climb
@@ -629,7 +623,7 @@ class Base_DLC(object,Utils,ICoords,OStep_utils):
          }
         node_id = self.PES.lot.node_id
         if value>0:
-            print(" setting %i opt_type to %s (%i)" %(node_id,opts[value],value))
+            print(" setting node %i opt_type to %s (%i)" %(node_id,opts[value],value))
         self._opt_type=value
 
     def set_opt_type(self,stage):
