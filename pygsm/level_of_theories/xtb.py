@@ -51,7 +51,7 @@ class XTB(Lot):
                 for line in lot_inp_lines:
                     tempfile.write(line)
 
-        with open(os.path.join(os.path.dirname(tempfilename), "coords"), 'w') as coordsfile:
+        with open(os.path.join(os.path.dirname(tempfilename), "coords.xyz"), 'w') as coordsfile:
             coordsfile.write("{}\n".format(len(geom)))
             coordsfile.write("{} {}\n".format(self.charge, multiplicity))
 
@@ -80,14 +80,14 @@ class XTB(Lot):
 
         if self.calc_grad:
             cmd = "xtb {} --grad --gbsa water extreme --chrg {} --acc 0.01 --input {} --namespace {} --parallel 32".format(
-                os.path.join(tempdir, "coords"),
+                os.path.join(tempdir, "coords.xyz"),
                 self.charge,
                 tempfilename,
                 os.path.join(tempdir, "xtbout")
             )
         else:
             cmd = "xtb {} --sp --gbsa water extreme --chrg {} --acc 0.01 --input {} --namespace {} --parallel 32".format(
-                os.path.join(tempdir, "coords"),
+                os.path.join(tempdir, "coords.xyz"),
                 self.charge,
                 tempfilename,
                 os.path.join(tempdir, "xtbout")
