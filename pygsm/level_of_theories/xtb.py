@@ -16,7 +16,7 @@ class XTB(Lot):
     def __init__(self,options):
         super(XTB,self).__init__(options)
 
-        scratch = os.environ("SCRATCH")
+        scratch = os.environ["SCRATCH"]
 
         for state in self.states:
             tempfolder = scratch + '/string_{:03d}/{}.{}/'.format(self.ID,self.node_id,state[0])
