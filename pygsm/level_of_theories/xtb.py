@@ -53,7 +53,7 @@ class XTB(Lot):
 
         with open(os.path.join(os.path.dirname(tempfilename), "coords"), 'w') as coordsfile:
             coordsfile.write("{}\n".format(len(geom)))
-            coordsfile.write("{} {}\n").format(self.charge, multiplicity)
+            coordsfile.write("{} {}\n".format(self.charge, multiplicity))
 
             if os.path.isfile("link.txt"):
                 with open("link.txt") as link:
