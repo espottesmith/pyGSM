@@ -122,7 +122,7 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
         # Connect all non-bonded fragments together
         if connect:
             # Make a distance matrix mapping atom pairs to interatomic distances
-            AtomIterator, dxij = self.topology.distance_matrix(xyz,pbc=False)
+            AtomIterator, dxij = Topology.distance_matrix(xyz,pbc=False)
             D = {}
             for i, j in zip(AtomIterator, dxij[0]):
                 assert i[0] < i[1]
@@ -731,7 +731,7 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
                 # Connect all non-bonded fragments together
                 if connect:
                     # Make a distance matrix mapping atom pairs to interatomic distances
-                    AtomIterator, dxij = self.topology.distance_matrix(xyz,pbc=False)
+                    AtomIterator, dxij = Topology.distance_matrix(xyz,pbc=False)
                     D = {}
                     for i, j in zip(AtomIterator, dxij[0]):
                         assert i[0] < i[1]
