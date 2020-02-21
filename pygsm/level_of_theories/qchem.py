@@ -1,6 +1,7 @@
 # standard library imports
 import sys
 import os
+import shutil
 from os import path
 
 # third party
@@ -49,6 +50,9 @@ class QChem(Lot):
             with open(self.lot_inp_file) as lot_inp:
                 lot_inp_lines = lot_inp.readlines()
             for line in lot_inp_lines:
+                if "solvent other" in line:
+                    shutil.copyfile(os.path.join(os.path.dirname(self.lot_inp_file), "solvent_data"),
+                                    os.path.join(os.path.dirname(tempfilename, "solvent_data")))
                 tempfile.write(line)
 
         tempfile.write('{} {}\n'.format(self.charge,multiplicity))

@@ -44,9 +44,9 @@ def ts_opt(filepath, charge):
         print_level=2,
         Linesearch="NoLineSearch",
         update_hess_in_bg=False,
-        conv_Ediff=100,
-        conv_dE=1,
-        conv_gmax=100,
+        conv_Ediff=100.0,
+        conv_dE=1.0,
+        conv_gmax=100.0,
         opt_climb=False,
         )
 
