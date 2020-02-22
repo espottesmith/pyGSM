@@ -52,7 +52,7 @@ class QChem(Lot):
             for line in lot_inp_lines:
                 if "solvent other" in line:
                     shutil.copyfile(os.path.join(os.path.dirname(self.lot_inp_file), "solvent_data"),
-                                    os.path.join(os.path.dirname(tempfilename, "solvent_data")))
+                                    os.path.join(os.path.dirname(tempfilename), "solvent_data"))
                 tempfile.write(line)
 
         tempfile.write('{} {}\n'.format(self.charge,multiplicity))
