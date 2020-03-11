@@ -84,7 +84,7 @@ class QChem(Lot):
         cmd = "qchem -nt {} -save {} {}.qchem.out string_{:03d}/{}.{}".format(self.nproc,tempfilename,tempfilename,self.ID,self.node_id,multiplicity)
         print(cmd)
 
-        p = subprocess.run(cmd.split(" "), shell=True)
+        os.system(cmd)
        
         # PARSE OUTPUT #
         if self.calc_grad:
