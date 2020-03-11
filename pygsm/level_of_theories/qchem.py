@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 from os import path
+import subprocess
 
 # third party
 import numpy as np
@@ -50,9 +51,6 @@ class QChem(Lot):
             with open(self.lot_inp_file) as lot_inp:
                 lot_inp_lines = lot_inp.readlines()
             for line in lot_inp_lines:
-                if "solvent other" in line:
-                    shutil.copyfile(os.path.join(os.path.dirname(self.lot_inp_file), "solvent_data"),
-                                    os.path.join(os.path.dirname(tempfilename), "solvent_data"))
                 tempfile.write(line)
 
         tempfile.write('{} {}\n'.format(self.charge,multiplicity))
@@ -84,9 +82,9 @@ class QChem(Lot):
            self.write_preamble(geom,multiplicity,tempfilename,jobtype='SP')
         
         cmd = "qchem -nt {} -save {} {}.qchem.out string_{:03d}/{}.{}".format(self.nproc,tempfilename,tempfilename,self.ID,self.node_id,multiplicity)
-        #print(cmd)
+        print(cmd)
 
-        os.system(cmd)
+        p = subprocess.run(cmd.split(" "), shell=True)
        
         # PARSE OUTPUT #
         if self.calc_grad:
@@ -108,7 +106,7 @@ class QChem(Lot):
             tmp=[]
             for lines in gradlines:
                 if '$' in lines:
-                    temp+=1
+                    temp += 1
                 elif temp == 2:
                     tmpline = lines.split()
                     tmp.append([float(i) for i in tmpline])
