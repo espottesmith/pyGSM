@@ -13,15 +13,28 @@ sys.path.append(path.dirname( path.dirname( path.abspath(__file__))))
 from .base_lot import Lot
 from utilities import *
 
+
 class QChem(Lot):
     def __init__(self,options):
         super(QChem,self).__init__(options)
 
-        qcscratch = os.environ['QCSCRATCH']
+        qcscratch = os.getcwd()
+        scratchdir = os.path.join(qcscratch, "scratch")
+        if not os.path.isdir(scratchdir):
+            os.mkdir(scratchdir)
+
+        os.environ['QCSCRATCH'] = qcscratch
         for state in self.states:
-            tempfolder = qcscratch + '/string_{:03d}/{}_{}/'.format(self.ID,self.node_id,state[0])
+            tempfolder = os.getcwd() + '/{}_{}/'.format(self.node_id,state[0])
             print(" making temp folder {}".format(tempfolder))
             os.system('mkdir -p {}'.format(tempfolder))
+
+            if os.path.isfile(os.path.join(os.getcwd(), "solvent_data")):
+                try:
+                    shutil.copy(os.path.join(os.getcwd(), "solvent_data"),
+                                qcscratch)
+                except shutil.SameFileError:
+                    continue
 
         copy_input_file = os.getcwd() + "/QChem_input.txt"
         print(copy_input_file)
@@ -74,21 +87,28 @@ class QChem(Lot):
     def run(self,geom,multiplicity):
 
         qcscratch = os.environ['QCSCRATCH']
-        tempfilename = qcscratch + '/string_{:03d}/{}_{}/tempQCinp'.format(self.ID,self.node_id,multiplicity)
 
         if self.calc_grad:
-           self.write_preamble(geom,multiplicity,tempfilename)
+           self.write_preamble(geom,multiplicity,'mol.inp')
         else:
-           self.write_preamble(geom,multiplicity,tempfilename,jobtype='SP')
-        
-        cmd = "qchem -nt {} -save {} {}.qchem.out string_{:03d}/{}_{}".format(self.nproc,tempfilename,tempfilename,self.ID,self.node_id,multiplicity)
+           self.write_preamble(geom,multiplicity,'mol.inp',jobtype='SP')
+
+        cmd = "qchem -nt {} -save mol.inp mol.out scratch".format(self.nproc)
+        print("In directory: ", os.getcwd())
+        print("QSCRATCH: ", os.environ["QCSCRATCH"])
         print(cmd)
 
-        os.system(cmd)
-       
+        subprocess.run(cmd, shell=True)
+
+        shutil.copy("mol.inp", os.path.join(os.getcwd(), "{}_{}".format(self.node_id,multiplicity), "mol.inp"))
+        shutil.copy("mol.out", os.path.join(os.getcwd(), "{}_{}".format(self.node_id,multiplicity), "mol.out"))
+        if os.path.isfile(os.path.join(qcscratch, "scratch", "GRAD")):
+            shutil.copy(os.path.join(qcscratch, "scratch", "GRAD"),
+                        os.path.join(os.getcwd(), "{}_{}".format(self.node_id,multiplicity), "GRAD"))
+
         # PARSE OUTPUT #
         if self.calc_grad:
-            efilepath = qcscratch + '/string_{:03d}/{}_{}/GRAD'.format(self.ID,self.node_id,multiplicity)
+            efilepath = os.getcwd() + '/{}_{}/GRAD'.format(self.node_id,multiplicity)
             with open(efilepath) as efile:
                 elines = efile.readlines()
             
@@ -115,8 +135,6 @@ class QChem(Lot):
             self.grada.append((multiplicity,tmp))
         else:
             raise NotImplementedError
-
-
 
         return 
 
@@ -158,8 +176,8 @@ class QChem(Lot):
         if node_id != lot.node_id:  #and copy_wavefunction: # other theories are more sensitive than qchem -- commenting out
             for state in lot.states:
                 multiplicity = state[0]
-                efilepath_old=base+ '/string_{:03d}/{}_{}'.format(lot.ID,lot.node_id,multiplicity)
-                efilepath_new =base+ '/string_{:03d}/{}_{}'.format(lot.ID,node_id,multiplicity)
+                efilepath_old=base+ '/{}_{}'.format(lot.node_id,multiplicity)
+                efilepath_new =base+ '/{}_{}'.format(node_id,multiplicity)
                 cmd = 'cp -r ' + efilepath_old +' ' + efilepath_new
                 print(" copying QCSCRATCH files\n {}".format(cmd))
                 os.system(cmd)
