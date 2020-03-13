@@ -97,7 +97,7 @@ def write_xyz(
     fh.write('%d\n' % len(geom))
     fh.write('%i\n' % charge)
     for atom in geom:
-        fh.write('%-2s %14.6f %14.6f %14.6f\n' % (
+        fh.write('%-2s %18.10f %18.10f %18.10f\n' % (
             atom[0],
             scale*atom[1],
             scale*atom[2],
@@ -124,7 +124,7 @@ def write_xyzs(
     for geom in geoms:
         fh.write('%d\n\n' % len(geom))
         for atom in geom:
-            fh.write('%-2s %14.6f %14.6f %14.6f\n' % (
+            fh.write('%-2s %18.10f %18.10f %18.10f\n' % (
                 atom[0],
                 scale*atom[1],
                 scale*atom[2],
@@ -170,7 +170,7 @@ def write_xyzs_w_comments(
         fh.write('%d\n' % len(geom))
         fh.write('%s\n' % comment)
         for atom in geom:
-            fh.write('%-2s %14.6f %14.6f %14.6f\n' % (
+            fh.write('%-2s %18.10f %18.10f %18.10f\n' % (
                 atom[0],
                 scale*atom[1],
                 scale*atom[2],
