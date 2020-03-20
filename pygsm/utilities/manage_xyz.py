@@ -142,7 +142,7 @@ def write_amber_xyz(
     fh.write('  %d\n' % len(geom))
     for line in geom:
         for elem in line[1:]:
-            fh.write(" {:11.7f}".format(float(elem)))
+            fh.write(" {:14.10f}".format(float(elem)))
             count+=1
         if count % 6 == 0:
             fh.write("\n")
