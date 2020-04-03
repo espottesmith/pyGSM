@@ -556,13 +556,13 @@ def read_isomers_file(isomers_file):
                 elif elem=="ROTATE":
                     threeInts =True
             else:
-                if twoInts and i>2:
+                if twoInts and i < 2:
                     dc.append(float(elem))
-                elif twoInts and i>3:
+                elif twoInts and i < 3:
                     dc.append(float(elem)) # add break dist
-                elif threeInts and i>3:
+                elif threeInts and i < 3:
                     dc.append(float(elem))
-                elif fourInts and i>4:
+                elif fourInts and i < 4:
                     dc.append(float(elem))
                 else:
                     dc.append(int(elem))
