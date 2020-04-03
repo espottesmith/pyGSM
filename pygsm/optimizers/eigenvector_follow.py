@@ -136,18 +136,18 @@ class eigenvector_follow(base_optimizer):
             fx = ls['fx']
             g  = ls['g']
 
-            if ls['status'] ==-2:
+            if ls['status'] ==-2:  # Not used
                 print('[ERROR] the point return to the privious point')
                 x = xp.copy()
                 molecule.xyz = self.xyzp
                 g = gp.copy()
                 fx = fxp
                 ratio=0.
-
                 molecule.newHess=5
                 #return ls['status']
+
             if ls['step'] > self.options['DMAX']:
-                if ls['step']<= self.options['abs_max_step']:     # absolute max
+                if ls['step']<= self.options['abs_max_step']:  # absolute max
                     print(" Increasing DMAX to {}".format(ls['step']))
                     self.options['DMAX'] = ls['step']
                 else:
@@ -231,7 +231,7 @@ class eigenvector_follow(base_optimizer):
             elif not self.opt_cross and molecule.gradrms < self.conv_grms and abs(gmax) < self.conv_gmax and abs(dEstep) < self.conv_Ediff and abs(disp) < self.conv_disp:
                 if self.opt_climb and opt_type=="CLIMB":
                     gts = np.dot(g.T,molecule.constraints[:,0])
-                    if gts<self.conv_grms:
+                    if abs(gts)<self.conv_grms:
                         self.converged=True
                 else:
                     self.converged=True

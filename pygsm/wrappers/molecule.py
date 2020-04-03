@@ -406,6 +406,12 @@ class Molecule(object):
         gradx = self.PES.get_gradient(self.xyz) 
         return self.coord_obj.calcGrad(self.xyz,gradx)  #CartesianCoordinate just returns gradx
 
+    # for PES seams
+    @property
+    def avg_gradient(self):
+        gradx = self.PES.get_avg_gradient(self.xyz) 
+        return self.coord_obj.calcGrad(self.xyz,gradx)  #CartesianCoordinate just returns gradx
+
     @property
     def derivative_coupling(self):
         dvecx = self.PES.get_coupling(self.xyz) 
@@ -517,6 +523,11 @@ class Molecule(object):
     @property
     def coord_basis(self):
         return self.coord_obj.Vecs
+
+    @coord_basis.setter
+    def coord_basis(self,value):
+        self.coord_obj.Vecs = value
+
 
     def update_coordinate_basis(self,constraints=None):
         if self.coord_obj.__class__.__name__=='CartesianCoordinates':
