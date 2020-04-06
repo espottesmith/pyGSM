@@ -15,7 +15,7 @@ class Print:
             for geom in geoms:
                 f.write('%d\n\n' % len(geom))
                 for atom in geom:
-                    f.write('%-2s %14.6f %14.6f %14.6f\n' % (
+                    f.write('%-2s %14.10f %14.10f %14.10f\n' % (
                         atom[0],
                         atom[1],
                         atom[2],
