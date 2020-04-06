@@ -74,6 +74,7 @@ def main():
     parser.add_argument('-conv_Ediff',default=100.,type=float,help='')
     parser.add_argument('-conv_dE',default=1.,type=float,help='')
     parser.add_argument('-conv_gmax',default=100.,type=float,help='')
+    parser.add_argument('-conv_disp',default=100.,type=float,help='')
     parser.add_argument('-DMAX',default=1.,type=float,help='')
     parser.add_argument('-sigma',default=1.,type=float,help='The strength of the difference energy penalty in Penalty_PES')
     parser.add_argument('-prim_idx_file',type=str,help="A filename containing a list of indices to define fragments. 0-Based indexed")
@@ -430,6 +431,7 @@ def main():
             conv_Ediff = inpfileq['conv_Ediff'],
             conv_dE = inpfileq['conv_dE'],
             conv_gmax = inpfileq['conv_gmax'],
+            conv_disp = inpfileq['conv_disp'],
             DMAX = inpfileq['DMAX'],
             opt_climb = True if args.only_climb else False,
             )
