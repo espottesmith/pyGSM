@@ -135,14 +135,15 @@ def main():
 
               # GSM
               'gsm_type': args.mode, # SE_GSM, SE_Cross
-              'num_nodes' : args.num_nodes,
+              'num_nodes': args.num_nodes,
               'isomers_file': args.isomers,
               'ADD_NODE_TOL': args.ADD_NODE_TOL,
               'CONV_TOL': args.CONV_TOL,
               'conv_Ediff': args.conv_Ediff,
               'conv_dE': args.conv_dE,
               'conv_gmax': args.conv_gmax,
-              'BDIST_RATIO':args.BDIST_RATIO,
+              'conv_disp': args.conv_disp,
+              'BDIST_RATIO': args.BDIST_RATIO,
               'DQMAG_MAX': args.DQMAG_MAX,
               'growth_direction': args.growth_direction,
               'ID':args.ID,
