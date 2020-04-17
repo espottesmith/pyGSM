@@ -122,7 +122,7 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
         # Connect all non-bonded fragments together
         if connect:
             # Make a distance matrix mapping atom pairs to interatomic distances
-            AtomIterator, dxij = self.distance_matrix(xyz,pbc=False)
+            AtomIterator, dxij = Topology.distance_matrix(xyz,pbc=False)
             D = {}
             for i, j in zip(AtomIterator, dxij[0]):
                 assert i[0] < i[1]
@@ -629,7 +629,11 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
         #return self.GInverse_SVD(xyz)
 
     def add(self, dof,verbose=False):
-        if dof not in self.Internals:
+        if dof.__class__.__name__ in ['CartesianX', 'CartesianY','CartesianZ']:
+            if verbose:
+                print((" adding ",dof))
+            self.Internals.append(dof)
+        elif dof not in self.Internals:
             if verbose:
                 print((" adding ",dof))
             self.Internals.append(dof)
@@ -728,10 +732,10 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
             if info[-1]=='reg':
                 frag = info[2]
                 noncov = []
-                # Connect all non-bonded fragments together
                 if connect:
+                    # Connect all non-bonded fragments together
                     # Make a distance matrix mapping atom pairs to interatomic distances
-                    AtomIterator, dxij = self.distance_matrix(xyz,pbc=False)
+                    AtomIterator, dxij = Topology.distance_matrix(xyz,pbc=False)
                     D = {}
                     for i, j in zip(AtomIterator, dxij[0]):
                         assert i[0] < i[1]
@@ -748,8 +752,7 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
                             self.topology.add_edge(edge[0], edge[1])
                             noncov.append(edge)
            
-                else:
-                    #Add Cart or TR
+                else: #Add Cart or TR
                     if addcart:
                         for i in range(info[0],info[1]):
                             self.add(CartesianX(i, w=1.0))
@@ -777,6 +780,7 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
                                 self.add(CartesianY(j, w=1.0))
                                 self.add(CartesianZ(j, w=1.0))
                                 nprims+=3
+
                 # # Build a list of noncovalent distances
                 # Add an internal coordinate for all interatomic distances
                 for (a, b) in frag.edges():
@@ -829,7 +833,8 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
                                         for i in np.argsort(dots)[:2]:
                                             if self.add(trans[i]([a, b, c], w=w)):
                                                 nprims+=1
-                                    
+                            
+                # Make Dihedrals
                 for b in frag.nodes():
                     for a in frag.neighbors(b):
                         for c in frag.neighbors(b):
@@ -1218,18 +1223,42 @@ class PrimitiveInternalCoordinates(InternalCoordinates):
     #        tot+=num_prim
     #    return new_xyz
 
-    def second_derivatives(self, xyz):
+    #def second_derivatives(self, xyz):
+    #    self.calculate(xyz)
+    #    answer = []
+    #    for Internal in self.Internals:
+    #        answer.append(Internal.second_derivative(xyz))
+    #    # This array has dimensions:
+    #    # 1) Number of internal coordinates
+    #    # 2) Number of atoms
+    #    # 3) 3
+    #    # 4) Number of atoms
+    #    # 5) 3
+    #    return np.array(answer)
+
+    def second_derivatives(self,xyz):
         self.calculate(xyz)
-        answer = []
-        for Internal in self.Internals:
-            answer.append(Internal.second_derivative(xyz))
+        c_list = []
+        for info in self.block_info:
+            sa = info[0]
+            ea = info[1]
+            sp = info[2]
+            ep = info[3]
+            na = ea - sa
+            SDer = np.array( 
+                    [ np.reshape(p.second_derivative(xyz[sa:ea,:],start_idx=sa),(3*na,3*na)) for p in self.Internals[sp:ep] ]
+                    )
+
+            c_list.append(SDer)
+        
+        answer = block_tensor(c_list)
         # This array has dimensions:
         # 1) Number of internal coordinates
         # 2) Number of atoms
         # 3) 3
         # 4) Number of atoms
         # 5) 3
-        return np.array(answer)
+        return answer
 
 
     def get_hybrid_indices(self,xyz):
